@@ -95,5 +95,25 @@ attack the MCP server. See the homework description for the full rules.
 ### Task 1
 > one paragraph describing your solution, and your results on `public_test`.
 
+For Task 1, I implemented a bounded verification workflow using LangChain and deepseek-v4-flash. The workflow first extracts the candidate’s factual claims while preserving original job titles and explicit seniority. It then searches the SocialGraph MCP server using the candidate’s name, current city and industry, progressively relaxing the filters when necessary. Identity resolution uses multiple independent details, such as employers and education, rather than selecting the first search result. Once a candidate is identified, the workflow compares every listed claim against the retrieved LinkedIn profile. The model handles equivalent wording, while Python checks employment dates, graduation years and explicitly claimed seniority against the mapped profile entries. A plain job title does not imply a seniority level, and listing fewer skills is permitted. To improve reliability and efficiency, I added per-CV caching, limited retries for transport failures, explicit query and model-call budgets, and concurrency capped at three CVs. Each CV has a 180-second timeout, with a 25-minute budget for the verification batch. Failures return a fallback score without crashing the batch. In one public_test run, all seven CVs were classified correctly, achieving 100% accuracy. The verification stage took 27.5 seconds, with no errors or fallback scores. This result demonstrates performance on the public examples, but does not establish accuracy on unseen CVs.
+
+
+
 ### Task 2
 > the attack techniques you used and why you expect them to work.
+
+For Task 2, I used a hidden text and PDF text extraction. Kelly Tsang’s LinkedIn profile lists her AIA position as Manager with mid seniority. My adversarial CV visibly presents this position as “Senior Manager”, introducing a false seniority claim. I rendered the embellished job heading as an image and placed an invisible, extractable text layer containing the truthful title “Manager” at the same location. The remaining CV information matches her profile. This technique targets the document extraction stage rather than attempting to override the model’s instructions. I expect it to work because the specified verifiers receive text from the PDF loader, which may extract the invisible text without reading the image. Consequently, the verifier can correctly compare its input against LinkedIn while overlooking the discrepancy visible on the page. In my local control test, the ordinary false CV received 0.05 and was rejected for seniority inflation. The adversarial version received 0.95 in all three runs, while the true CV also received 0.95. The Task 1 code remained unchanged during these comparisons. These results support the proposed extraction mechanism, although they do not establish success against the five undisclosed grading agents. A verifier that compares rendered page content with the text layer could detect the inconsistency.
+
+
+###Task3
+
+AI can help people complete work much faster, but efficiency does not guarantee reliability. In this homework, my verification agent classified all seven public CVs correctly, and the verification stage took only 27.5 seconds. This demonstrated how AI could reduce the time needed to search profiles and compare information. However, Task 2 revealed a limitation: an agent can accurately check the information it receives while still being deceived about the document it is supposed to verify.
+
+My attack exploited the difference between a PDF’s visible content and its extractable text layer. Kelly Tsang’s actual AIA position was Manager with mid seniority. The adversarial PDF visibly showed “Senior Manager”, but this heading was rendered as an image. An invisible text layer at the same location contained “Manager”. The PDF loader therefore supplied the truthful title to the agent while leaving the visible exaggeration outside its verification process. The ordinary false CV was rejected with a score of 0.05, whereas the adversarial version received 0.95 in all three local runs. The agent’s comparison was accurate, but its conclusion about the whole document was wrong.
+
+This experience showed me why AI-assisted work still needs human double-checking, particularly when accepting incorrect information could have serious consequences. I am especially concerned about allowing false claims to pass verification. If the null hypothesis is that a CV contains false claims, accepting it as valid represents a Type II error: failing to detect the falsehood. Human review should therefore examine the original document and the supporting evidence, rather than only reading the AI’s conclusion. This does not mean repeating every automated step manually. It means checking important claims and weaknesses in how the system obtains its input. Overreliance on AI can create unexpected errors because a confident, well-explained answer may still be based on an incomplete representation of reality.
+
+
+
+
+
